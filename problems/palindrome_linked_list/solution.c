@@ -1,60 +1,84 @@
-/**
- * Definition for singly-linked list.
- * struct ListNode {
- *     int val;
- *     struct ListNode *next;
- * };
- */
+#include <stdio.h>
+#include <stdlib.h>
+
 typedef struct _NodeStack{
     int value;
     struct _NodeStack *next;
 } NodeStack;
+
 typedef struct {
     int quantity;
     NodeStack *next;
 } NodeStackHead;
 
-NodeStackHead *createStackHead(void);
-NodeStack *createStackNode(int value);
-void pushStack(NodeStackHead **head, NodeStack *newNode);
-NodeStack *popStack(NodeStackHead **head);
+bool isPalindrome(struct ListNode* head);
+NodeStackHead *createHead(void);
+NodeStack *createNode(int value);
+void push(NodeStackHead **head, NodeStack *newNode);
+NodeStack *pop(NodeStackHead **head);
+void reset(NodeStackHead **head);
+void listStack(NodeStackHead **head);
 
-bool isPalindrome(struct ListNode* head){
-    NodeStackHead *stackHead = createStackHead();
-    struct ListNode* middleNode = head;
-    int isOdd = 0; //variable to store if the linked list has an off number of variables
-    if(head->next == NULL) { //if there is only one element, it already is a palindrome, here to prevent errors when trying to access memory
-        printf("a\n");
-        free(stackHead);
-        return true;
+bool isPalindrome (struct ListNode *head) { 
+    struct ListNode *fast = head->next; // pointer that goes through linked list 2 positions at a time
+    struct ListNode *middle = head; // pointer that geos through linked lise 1 position at a time
+    NodeStackHead *stack = createHead();
+    int isOdd = 0;
+    if(fast == NULL) {
+        reset(&(stack));
+        return true; // if there is only one element, means that it's a palindrome
     }
-    for(struct ListNode* fastNode = middleNode->next;fastNode->next != NULL; middleNode = middleNode->next, fastNode = fastNode->next->next) { //fast pointer iterates 2 by 2 and starts at second node, middle follows 1 by 1, and when the fast pointer reaches the end, the middle pointer should be 1 position before the middle of the linked list.
-        pushStack(&(stackHead),createStackNode(middleNode->val)); // pushes elements from the start to the middle into a stack
-        if(fastNode->next->next == NULL) { //means that there is an odd number of elements
+    while(fast->next != NULL) { 
+        if(fast->next->next == NULL) {
             isOdd = 1;
             break;
         }
+        fast = fast->next->next;
+        push(&(stack), createNode(middle->val));
+        middle = middle->next;
+
     }
-    if(isOdd == 1) {
-        middleNode = middleNode->next; //if the number of elements is odd, advances 1 more position to skip the element right in the middle
-    } else {
-        pushStack(&(stackHead), createStackNode(middleNode->val)); // pushes last element before the middle into stack, must not be done when odd becuase it'll push the element before the middle one twice
+    push(&(stack), createNode(middle->val));
+    middle = middle->next;
+    if(isOdd) {
+        middle = middle->next; // if its odd, the middle needs to advance one more to skip over the middle character
     }
-    middleNode = middleNode->next; // advances middle pointer by 1 position, since it was 1 position before the middle of the list
-    for(; middleNode != NULL; middleNode = middleNode->next) { // this could have been done in one for loop, but that's an optimization I'll work on later, am doing this late at night :) This iterates over the rest of the linked list, testing each element of the stack to test if it's a palindrome
-        NodeStack *temp = popStack(&(stackHead)); 
-        if(middleNode->val != temp->value) {
+    
+    // now with the stack containing all the elements that are in the first half, needs to test to see if it's a palindrome
+
+    for(; middle != NULL; middle = middle->next) {
+        NodeStack *temp = pop(&(stack));
+        if(temp->value != middle->val) {
+            reset(&(stack));
             free(temp);
-            resetStack(&(stackHead));
-            free(stackHead);
             return false;
         }
         free(temp);
     }
-    free(stackHead); // stack should already be empty if it gets to this point
+    reset(&(stack));
     return true;
+
+
+
+
 }
-void pushStack(NodeStackHead **head, NodeStack *newNode) {
+
+NodeStackHead *createHead(void) { // return the address of a new Head that points to NULL
+    
+    NodeStackHead* newHead = (NodeStackHead*)malloc(sizeof(NodeStackHead));
+    newHead->next = NULL;
+    newHead->quantity = 0;
+    return newHead;
+}
+
+NodeStack *createNode(int value) {
+    NodeStack* newNode = (NodeStack*)malloc(sizeof(NodeStack));
+    newNode->next = NULL;
+    newNode->value = value;
+    return newNode;
+}
+
+void push(NodeStackHead **head, NodeStack *newNode) {
     
     if((*head)->next == NULL) {
         (*head)->next = newNode;
@@ -66,7 +90,7 @@ void pushStack(NodeStackHead **head, NodeStack *newNode) {
     }
 }
 
-NodeStack *popStack(NodeStackHead **head) { //pops the top element from the stack, NOTE: Does not free the removed element
+NodeStack *pop(NodeStackHead **head) { //pops the top element from the stack, NOTE: Does not free the removed element
     NodeStack *poppedNode;
     if((*head)->next == NULL) {
         return NULL; // the stack is empty
@@ -79,22 +103,24 @@ NodeStack *popStack(NodeStackHead **head) { //pops the top element from the stac
     }
 }
 
-NodeStackHead *createStackHead(void) { // return the address of a new Head that points to NULL
-    
-    NodeStackHead* newHead = (NodeStackHead*)malloc(sizeof(NodeStackHead));
-    newHead->next = NULL;
-    newHead->quantity = 0;
-    return newHead;
-}
-
-NodeStack *createStackNode(int value) {
-    NodeStack* newNode = (NodeStack*)malloc(sizeof(NodeStack));
-    newNode->next = NULL;
-    newNode->value = value;
-    return newNode;
-}
-void resetStack(NodeStackHead **head) { // clears stack
-    for(NodeStack *p = popStack(head); p != NULL; p = popStack(head)) { //iterates over the stack, popping each element until the head points to NULL
+void reset(NodeStackHead **head) { // clears stack
+    for(NodeStack *p = pop(head); p != NULL; p = pop(head)) { //iterates over the stack, popping each element until the head points to NULL
         free(p);  // frees the current element
     }
+}
+
+void listStack(NodeStackHead **head) {
+    NodeStackHead *newHead = createHead(); // new head to insert the read elements
+    int totalQuantity = (*head)->quantity;
+    printf("There are %d elements in the stack \n", (*head)->quantity);
+    for(int i=0;i<totalQuantity;i++) {
+        NodeStack *poppedElement = pop(head);
+        printf("- Value: %d\n", poppedElement->value);
+        push(&(newHead), poppedElement); //insert the popped elements into the new head
+    }
+    for(int i=0;i<totalQuantity;i++) {
+        NodeStack *poppedElement = pop(&newHead);
+        push(head, poppedElement); //insert the popped elements back into head in the right order
+    }
+    free(newHead);
 }
